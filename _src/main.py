@@ -30,6 +30,8 @@ if __name__ == "__main__":
     # model
     parser.add_argument("--N_ITER", type=int, default=20)
     parser.add_argument("--alpha", type=float)
+    parser.add_argument("--beta", type=float)
+
 
     # experiments
     parser.add_argument("--verbose", action="store_true")
@@ -74,11 +76,12 @@ if __name__ == "__main__":
     start_time = time.process_time()
     inf_unigram = infinite_mixture_unigram(
         alpha=args.alpha, 
+        beta=args.beta,
         max_iter=args.N_ITER, 
         random_state=0,
         verbose=args.verbose,
     )
-    
+
     W = inf_unigram.fit_transform(matrix_df)
     elapsed_time = time.process_time() - start_time
     print("done infinite mixture unigram (CRP) inference")
