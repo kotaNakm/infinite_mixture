@@ -44,10 +44,10 @@ class infinite_mixture_unigram(object):
         """
         self.init_status(X)
         # for dataframe
-        self.bow = pd.crosstab(X[X.columns[0]],X[X.columns[1]]).values.astype(np.float32)
+        bow = pd.crosstab(X[X.columns[0]],X[X.columns[1]]).values.astype(np.float32)
 
         for iter_ in range(self.max_iter):
-            self.assignment, self.k_last, hist_k_num = self.sample_topic(self.bow)
+            self.assignment, self.k_last, hist_k_num = self.sample_topic(bow)
             self.hist_k_num_all[iter_] = hist_k_num
             print(f"ITERATION: {iter_+1}/{self.max_iter}")
             if self.verbose:
@@ -71,7 +71,6 @@ class infinite_mixture_unigram(object):
             self.assignment,
             self.k_index,
             self.k_last,
-            self.bow,
             self.counter_docs,
             self.counter_words,
             self.alpha,
@@ -92,7 +91,6 @@ def _gibbs_sampling_CRP(
     Z,
     k_index,
     k_last,
-    bow,
     counter_docs,
     counter_words,
     alpha,
@@ -104,7 +102,7 @@ def _gibbs_sampling_CRP(
     X: event matrix (bag of words)
     Z: topic assignments of the previous sampling
     """
-    nunique_words = float(bow.shape[1])
+    nunique_words = float(X.shape[1])
     hist_k_num = np.full(len(Z),-1)
     max_k=len(k_index)
 
@@ -133,6 +131,7 @@ def _gibbs_sampling_CRP(
             if w_freq > 0:
                 # posts *= gamma(counter_words[word_ind] + w_freq + beta) / gamma(counter_words[word_ind]+ beta)
                 posts += gammaln(counter_words[word_ind] + w_freq + beta) - gammaln(counter_words[word_ind]+ beta)
+    
         # b. calc post prob for new topic 
         # posts[add_topic]  = alpha
         posts[add_topic]  = np.log(alpha + ZERO)
