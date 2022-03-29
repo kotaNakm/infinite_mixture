@@ -82,8 +82,8 @@ class infinite_mixture_unigram(object):
     def compute_vector(self,):
         k_orders = np.arange(len(self.k_index))
         activated_topics = k_orders[self.k_index==1]
-        self.topic_dist = self.counterK[activated_topics] / self.counterK[activated_topics].sum()
-        topic_aware_words_dist = self.counterM[:,activated_topics] / np.sum(self.counterM[:,activated_topics],axis=0)
+        self.topic_dist = (np.sum(self.counter_docs[:,activated_topics],axis=0) + self.alpha) / (self.counter_docs[:,activated_topics].sum() + self.alpha * len(activated_topics))
+        topic_aware_words_dist = (self.counter_words[:,activated_topics] + self.beta) / (np.sum(self.counter_words[:,activated_topics],axis=0) + self.beta * self.n_dims[1])
         self.components_ = topic_aware_words_dist
 
 # @numba.jit(nopython=True)
@@ -128,7 +128,7 @@ def _gibbs_sampling_CRP(
         # posts = np.sum(counter_docs,axis=0)
         # posts *= (np.sum(counter_words,axis=0) + beta * nunique_words) / (np.sum(counter_words,axis=0) + doc_nwords + beta * nunique_words)
         posts = np.log(np.sum(counter_docs,axis=0) + ZERO)
-        posts += gammaln(np.sum(counter_words,axis=0) + beta * nunique_words) - gammaln(np.sum(counter_words,axis=0) + doc_nwords + beta * nunique_words) + 0
+        posts += gammaln(np.sum(counter_words,axis=0) + beta * nunique_words) - gammaln(np.sum(counter_words,axis=0) + doc_nwords + beta * nunique_words)
         for word_ind, w_freq in enumerate(doc_words_freq):
             if w_freq > 0:
                 # posts *= gamma(counter_words[word_ind] + w_freq + beta) / gamma(counter_words[word_ind]+ beta)

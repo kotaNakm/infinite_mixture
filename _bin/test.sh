@@ -21,4 +21,4 @@ python3 _src/main.py --input_tag $INPUT \
                                   --verbose \
                                   --alpha 0.01 \
                                   --beta 0.01 \
-                                  --N_ITER 100 
+                                  --N_ITER 100
