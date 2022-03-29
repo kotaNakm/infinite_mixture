@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import numba
-import math
 from scipy.special import gamma, digamma, gammaln 
 
 
-ZERO = 1.0e-10
-MAX_K = 100
+MAX_K = 1000
+ZERO = 1.0e-8
 
 class infinite_mixture_unigram(object):
     def __init__(
@@ -30,21 +29,9 @@ class infinite_mixture_unigram(object):
         self.n_events = len(X)
         self.n_dims = X.max().values + 1
         self.hist_k_num_all = np.zeros((self.max_iter))
-        # max_k = self.n_events
 
-
-        self.counter_docs = np.zeros((self.n_dims[0], MAX_K), dtype=np.float32)
-        self.counter_words = np.zeros((self.n_dims[1], MAX_K), dtype=np.float32)
-        # self.counterK = np.zeros(MAX_K, dtype=int)
-        # document aware total word counts 
-        # self.counterA = np.zeros(self.n_dims[0], dtype=int)
-        # Asum = X.groupby(X.columns[0]).size()
-        # self.counterA[Asum.index] = Asum.values
-        # numpy
-        # self.counterM = np.zeros((X.shape[1], max_k), dtype=int)
-        # self.counterK = np.zeros(max_k, dtype=int)
-        # # document aware total word counts 
-        # self.counterA = np.sum(X, axis=0)
+        self.counter_docs = np.zeros((self.n_dims[0], MAX_K), dtype=np.float64)
+        self.counter_words = np.zeros((self.n_dims[1], MAX_K), dtype=np.float64)
 
         self.assignment =  np.full(self.n_dims[0], -1, dtype=int) # document-wise  
         self.k_index = np.zeros(MAX_K,dtype=int)
@@ -133,48 +120,39 @@ def _gibbs_sampling_CRP(
             if np.sum(counter_docs,axis=0)[pre_topic] == 0:
                 k_index[pre_topic] = 0
 
-
         """ compute posterior distribution """
-        posts = np.zeros(max_k, dtype=np.float32)
+        posts = np.zeros(max_k, dtype=np.float64)
         add_topic = k_last + 1        
 
         # a. calc post prob for existing topic 
         # posts = np.sum(counter_docs,axis=0)
         # posts *= (np.sum(counter_words,axis=0) + beta * nunique_words) / (np.sum(counter_words,axis=0) + doc_nwords + beta * nunique_words)
         posts = np.log(np.sum(counter_docs,axis=0) + ZERO)
-        print(np.sum(counter_docs,axis=0))
         posts += gammaln(np.sum(counter_words,axis=0) + beta * nunique_words) - gammaln(np.sum(counter_words,axis=0) + doc_nwords + beta * nunique_words) + 0
-        print(posts)
         for word_ind, w_freq in enumerate(doc_words_freq):
             if w_freq > 0:
                 # posts *= gamma(counter_words[word_ind] + w_freq + beta) / gamma(counter_words[word_ind]+ beta)
                 posts += gammaln(counter_words[word_ind] + w_freq + beta) - gammaln(counter_words[word_ind]+ beta)
-        print(posts)
         # b. calc post prob for new topic 
         # posts[add_topic]  = alpha
-        posts[add_topic]  = np.log(alpha)
+        posts[add_topic]  = np.log(alpha + ZERO)
         # posts[add_topic]  *= gamma(beta * nunique_words) / gamma(doc_nwords + beta * nunique_words)
         posts[add_topic]  += gammaln(beta * nunique_words) - gammaln(doc_nwords + beta * nunique_words)
         for word_ind, w_freq in enumerate(doc_words_freq):
             if w_freq > 0:
                 # posts[add_topic] *= gamma(w_freq + beta) / gamma(beta)
                 posts[add_topic] += gammaln(w_freq + beta) - gammaln(beta)
-        print(posts)
 
         # draw
-        posts[posts < 0] = 0
-        posts = posts / (posts.sum() + ZERO)
         try:
-            new_topic = np.argmax(np.random.multinomial(1, posts))
+            # posts = (posts[:add_topic+1]+1) / ((posts[:add_topic+1]+1).sum())
+            # posts = posts[:add_topic+1] / ((posts[:add_topic+1]+1).sum() + ZERO)
+            posts = posts[:add_topic+1] / ((posts[:add_topic+1]+1).sum())
+            new_topic = draw_one(posts[:add_topic+1])
+            # new_topic = np.argmax(np.random.multinomial(1, posts[:add_topic+1]))
+            # print(posts)
         except:
-            print("cannot calc assignment posterior:")
-            print(posts)
-            print(k_index)
-            print(posts.sum())
-            print(add_topic)
-            print(np.max(k_index) + 1)
-            print(len(posts))
-            print(counter_words[word_ind])
+            exit()
 
         if new_topic == add_topic:
             k_index[add_topic] = 1
@@ -185,7 +163,16 @@ def _gibbs_sampling_CRP(
         for word_ind, word_freq in enumerate(doc_words_freq):
             if word_freq > 0:
                 counter_words[word_ind, new_topic] += 1
-    
     hist_k_num = k_index.sum() 
-
     return Z, k_last, hist_k_num
+
+@numba.jit(nopython=True)
+def draw_one(posts):
+    residual = np.random.uniform(0, np.sum(posts))
+    return_sample = 0
+    for sample, prob in enumerate(posts):
+        residual -= prob                    
+        if residual < 0.0:
+            return_sample = sample
+            break  
+    return return_sample

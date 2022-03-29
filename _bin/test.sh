@@ -19,6 +19,6 @@ python3 _src/main.py --input_tag $INPUT \
                                   --out_dir $OUTPUT"/infinite_unigram/"$tag \
                                   --categorical_idxs "$categorical_idxs" \
                                   --verbose \
-                                  --alpha 1 \
-                                  --beta 1 \
-                                  --N_ITER 30 
+                                  --alpha 0.01 \
+                                  --beta 0.01 \
+                                  --N_ITER 100 
