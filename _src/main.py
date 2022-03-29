@@ -16,7 +16,7 @@ sys.path.append("_dat")
 sys.path.append("_src")
 
 import utils
-from infinite_mixture_unigram import infinite_mixture_unigram 
+from infinite_mixture_unigram import infinite_mixture_unigram
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -31,7 +31,6 @@ if __name__ == "__main__":
     parser.add_argument("--N_ITER", type=int, default=20)
     parser.add_argument("--alpha", type=float)
     parser.add_argument("--beta", type=float)
-
 
     # experiments
     parser.add_argument("--verbose", action="store_true")
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     matrix_df = matrix_df[categorical_idxs]
 
     mat_shape = matrix_df.max().values + 1
-    n_full_cells = len(matrix_df.groupby(["brand","category_code"]).count())
+    n_full_cells = len(matrix_df.groupby(["brand", "category_code"]).count())
     # n_full_cells = np.sum(matrix_df.groupby(categorical_idxs).size().values)
 
     print(f"--Dataset description--")
@@ -72,12 +71,11 @@ if __name__ == "__main__":
     print(f"sparsity(%): {1 - n_full_cells/ np.prod(mat_shape)}")
     print(f"------------------------")
 
-
     start_time = time.process_time()
     inf_unigram = infinite_mixture_unigram(
-        alpha=args.alpha, 
+        alpha=args.alpha,
         beta=args.beta,
-        max_iter=args.N_ITER, 
+        max_iter=args.N_ITER,
         random_state=0,
         verbose=args.verbose,
     )
@@ -86,9 +84,9 @@ if __name__ == "__main__":
     elapsed_time = time.process_time() - start_time
     print("done infinite mixture unigram (CRP) inference")
 
-    result=[inf_unigram,elapsed_time]
+    result = [inf_unigram, elapsed_time]
     if True:
-        dill.dump(result, open(f'{outputdir}/result.dill','wb'))
-    
+        dill.dump(result, open(f"{outputdir}/result.dill", "wb"))
+
     print(f"elapsed_time:{elapsed_time}s")
     print(outputdir)
